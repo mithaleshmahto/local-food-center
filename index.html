@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Local Food Center</title>
+<style>
+:root{--green:#16803c;--orange:#ff7900;--ink:#17212b;--cream:#f6f8ef}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;color:var(--ink);background:#fff}
+header{padding:15px 5%;display:flex;gap:15px;align-items:center;justify-content:space-between;flex-wrap:wrap;box-shadow:0 2px 12px #0001;background:#fff}
+.brand{font-size:23px;font-weight:800;color:var(--green)}.brand span{color:var(--orange)}nav{display:flex;gap:14px;flex-wrap:wrap}nav a{color:var(--ink);text-decoration:none;font-weight:700;font-size:14px}
+button,.btn{border:0;border-radius:9px;padding:11px 15px;background:var(--orange);color:#fff;font-weight:700;cursor:pointer}button.green{background:var(--green)}button.light{background:#eef2ed;color:#17212b}
+.hero{padding:50px 6%;color:white;background:linear-gradient(90deg,#17150ee8,#17150e55),url('https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1600&q=80') center/cover}
+.hero h1{font-size:clamp(36px,5vw,60px);margin:0 0 12px}.hero h1 span{color:#ff8a00}.hero p{max-width:580px;line-height:1.6;font-size:17px}
+section{padding:28px 5%}.muted{color:#697078}.panel{background:var(--cream);border-radius:14px;padding:20px;margin-bottom:18px}.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:180px}
+input,textarea,select{width:100%;padding:12px;border:1px solid #d6dadd;border-radius:8px;font:inherit;margin:5px 0 12px}label{font-weight:700;font-size:14px}
+.foods{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}.card{border:1px solid #e2e5e7;border-radius:12px;overflow:hidden}.card img{width:100%;height:155px;object-fit:cover;background:#eee}.info{padding:13px}.price{color:var(--green);font-weight:800}.small{font-size:13px;color:#697078}.hide{display:none!important}.status{padding:10px;border-radius:8px;background:#eef7ee;margin:12px 0}.danger{background:#fff0e8}.card button{margin-top:10px}
+footer{padding:22px 5%;background:#111a20;color:#fff}.notice{font-size:13px;line-height:1.5;color:#5e6670}
+@media(max-width:600px){header{justify-content:center}.hero{padding:38px 6%}nav{justify-content:center}}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="brand">🍲 Local <span>Food</span> Center</div><div class="small">Apna Khana • Apne Log • Apna Bazaar</div></div>
+  <nav><a href="#foods">Food Explore</a><a href="#sell">Food Sell Karein</a><a href="#orders">Mere Orders</a></nav>
+  <div id="authArea"><button onclick="showAuth()">Login / Sign Up</button></div>
+</header>
+<div class="hero"><h1>Local <span>Food</span> Center</h1><h2>Har Ghar Ka Swaad, Ab Ek Hi Jagah!</h2><p>Apna homemade ya local food list karein, aur apne area ke customers se orders paayein.</p><button onclick="document.querySelector('#foods').scrollIntoView({behavior:'smooth'})">Food Explore Karein</button> <button class="light" onclick="document.querySelector('#sell').scrollIntoView({behavior:'smooth'})">Apna Food Sell Karein</button></div>
+
+<section id="account" class="hide">
+  <div class="panel"><h2 id="authTitle">Login / Sign Up</h2>
+  <form id="authForm"><div class="row"><div><label>Email</label><input id="authEmail" type="email" required placeholder="you@example.com"></div><div><label>Password (kam se kam 6 characters)</label><input id="authPassword" type="password" minlength="6" required></div></div>
+  <button type="submit">Email se Login</button> <button type="button" class="green" onclick="signup()">Naya Account Banayein</button> <button type="button" class="light" onclick="hideAuth()">Band Karein</button></form>
+  <p class="notice">Real account ke liye Firebase setup zaroori hai. Password kisi ko share na karein.</p></div>
+</section>
+
+<section id="sell">
+<h2>Apna Food Sell Karein</h2><p class="muted">Seller account se login karke food listing publish karein.</p>
+<form id="foodForm" class="panel">
+<div class="row"><div><label>Food ka naam</label><input id="foodName" required maxlength="70" placeholder="Jaise Litti Chokha"></div><div><label>Price (₹)</label><input id="foodPrice" type="number" required min="1" max="50000" placeholder="50"></div></div>
+<div class="row"><div><label>Photo URL (optional)</label><input id="foodImage" type="url" placeholder="https://..."></div><div><label>Area / Shehar</label><input id="foodArea" required maxlength="100" placeholder="Jaise Dhanbad"></div></div>
+<label>Food details</label><textarea id="foodDescription" maxlength="400" placeholder="Quantity, veg/non-veg, available time..."></textarea>
+<button type="submit">Food Publish Karein</button><p class="notice">Is starter version mein photo URL diya ja sakta hai; direct photo upload baad mein Firebase Storage se jod sakte hain.</p>
+</form>
+</section>
+
+<section id="foods">
+<h2>Available Local Foods</h2><input id="search" placeholder="Food ya area search karein..." oninput="renderFoods()">
+<div id="foodsGrid" class="foods"><p>Food listings load ho rahi hain...</p></div>
+</section>
+
+<section id="orders"><h2>Mere Orders</h2><div id="ordersList" class="panel"><p class="muted">Apne orders dekhne ke liye login karein.</p></div></section>
+<footer><strong>🍲 Local Food Center</strong><p>Local sellers ko support karein 💚</p><p class="small">Marketplace starter. Live launch se pehle food safety, privacy, refunds aur local legal requirements check karein.</p></footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* STEP 1: Firebase Console se apna config yahan paste karein. */
+const firebaseConfig = {
+  apiKey: "PASTE_YOUR_FIREBASE_API_KEY",
+  authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
+  projectId: "PASTE_YOUR_PROJECT_ID",
+  storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
+  messagingSenderId: "PASTE_YOUR_SENDER_ID",
+  appId: "PASTE_YOUR_APP_ID"
+};
+const configured = !firebaseConfig.apiKey.startsWith("PASTE_");
+let app, auth, db, currentUser = null, foods = [];
+const fallbackFoods = [
+ {id:"sample1",name:"Litti Chokha",price:50,area:"Dhanbad",description:"Local favourite",image:"https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=700&q=80",sellerName:"Sample seller"},
+ {id:"sample2",name:"Aloo Paratha",price:40,area:"Dhanbad",description:"Homemade",image:"https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=700&q=80",sellerName:"Sample seller"}
+];
+if(configured){app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);
+onAuthStateChanged(auth, async user=>{currentUser=user;updateAuth();await loadFoods();await loadOrders();});
+}else{foods=fallbackFoods;renderFoods();document.getElementById("foodsGrid").insertAdjacentHTML("beforebegin",'<div class="status danger">Preview mode: Firebase config add karne ke baad real accounts aur database kaam karenge.</div>');updateAuth();}
+window.showAuth=()=>document.getElementById("account").classList.remove("hide");
+window.hideAuth=()=>document.getElementById("account").classList.add("hide");
+window.signup=async()=>{if(!configured)return alert("Pehle README mein diye gaye Firebase setup steps complete karein.");try{await createUserWithEmailAndPassword(auth,document.getElementById("authEmail").value,document.getElementById("authPassword").value);hideAuth();alert("Account ban gaya!");}catch(e){alert(e.message)}};
+document.getElementById("authForm").addEventListener("submit",async e=>{e.preventDefault();if(!configured)return alert("Pehle Firebase config add karein.");try{await signInWithEmailAndPassword(auth,document.getElementById("authEmail").value,document.getElementById("authPassword").value);hideAuth();}catch(err){alert(err.message)}});
+function updateAuth(){const el=document.getElementById("authArea");el.innerHTML=currentUser?`<span class="small">${escapeHtml(currentUser.email)}</span> <button class="light" id="logoutBtn">Logout</button>`:'<button onclick="showAuth()">Login / Sign Up</button>';document.getElementById("logoutBtn")?.addEventListener("click",()=>signOut(auth));}
+document.getElementById("foodForm").addEventListener("submit",async e=>{e.preventDefault();if(!configured)return alert("Food publish karne se pehle Firebase setup karein.");if(!currentUser){showAuth();return alert("Pehle login karein.");}
+const item={name:document.getElementById("foodName").value.trim(),price:Number(document.getElementById("foodPrice").value),image:document.getElementById("foodImage").value.trim(),area:document.getElementById("foodArea").value.trim(),description:document.getElementById("foodDescription").value.trim(),sellerId:currentUser.uid,sellerEmail:currentUser.email,createdAt:serverTimestamp(),active:true};
+try{await addDoc(collection(db,"foods"),item);e.target.reset();await loadFoods();alert("Food listing publish ho gayi.");}catch(err){alert("Publish nahi hua: "+err.message)}});
+async function loadFoods(){if(!configured)return;try{const snap=await getDocs(query(collection(db,"foods"),orderBy("createdAt","desc")));foods=snap.docs.map(d=>({id:d.id,...d.data()}));renderFoods();}catch(e){document.getElementById("foodsGrid").innerHTML='<p>Listings load nahi hui. Firestore setup aur rules check karein.</p>';}}
+window.renderFoods=()=>{const q=(document.getElementById("search")?.value||"").toLowerCase();const list=foods.filter(f=>(f.name+" "+f.area+" "+(f.description||"")).toLowerCase().includes(q));const grid=document.getElementById("foodsGrid");if(!list.length){grid.innerHTML="<p>Abhi koi food listing nahi mili.</p>";return;}grid.innerHTML=list.map(f=>`<article class="card"><img src="${safeUrl(f.image)}" alt="${escapeHtml(f.name)}" onerror="this.style.display='none'"><div class="info"><h3>${escapeHtml(f.name)}</h3><div class="small">${escapeHtml(f.area||"Area not given")}</div><p>${escapeHtml(f.description||"")}</p><div class="price">₹${Number(f.price)||0}</div><div class="small">Seller: ${escapeHtml(f.sellerEmail||f.sellerName||"Local seller")}</div><button onclick="placeOrder('${f.id}')">Cash on Delivery</button> <button class="green" onclick="onlinePay('${f.id}')">Online Pay</button></div></article>`).join("");};
+window.placeOrder=async id=>{if(!configured)return alert("Demo preview. Real orders ke liye Firebase setup karein.");if(!currentUser){showAuth();return alert("Order karne ke liye pehle login karein.");}const f=foods.find(x=>x.id===id);if(!f)return;const address=prompt("Delivery address likhein:");if(!address||address.trim().length<8)return alert("Kripya poora delivery address dein.");const phone=prompt("Contact mobile number likhein:");if(!phone||!/^\\d{10}$/.test(phone))return alert("10 digit mobile number dein.");try{await addDoc(collection(db,"orders"),{foodId:f.id,foodName:f.name,price:Number(f.price),sellerId:f.sellerId||"",buyerId:currentUser.uid,buyerEmail:currentUser.email,deliveryAddress:address.trim(),phone,paymentMethod:"COD",paymentStatus:"PAY_ON_DELIVERY",status:"PLACED",createdAt:serverTimestamp()});alert("COD order request submit ho gayi. Seller se order confirm karna hoga.");await loadOrders();}catch(e){alert("Order submit nahi hua: "+e.message)}};
+window.onlinePay=id=>{alert("Online payment live karne ke liye Razorpay/other provider account aur secure server-side payment order/verification endpoint banana zaroori hai. Sirf browser HTML mein secret key rakhna safe nahi hai. README dekhein.");};
+async function loadOrders(){const el=document.getElementById("ordersList");if(!configured||!currentUser){el.innerHTML='<p class="muted">Apne orders dekhne ke liye login karein.</p>';return;}try{const snap=await getDocs(query(collection(db,"orders"),where("buyerId","==",currentUser.uid)));const list=snap.docs.map(d=>d.data());el.innerHTML=list.length?list.map(o=>`<div class="status"><b>${escapeHtml(o.foodName)}</b> — ₹${Number(o.price)||0}<br><span class="small">${escapeHtml(o.status)} · ${escapeHtml(o.paymentMethod)}</span></div>`).join(""):"Abhi koi order nahi hai.";}catch(e){el.textContent="Orders load nahi hue. Firestore rules check karein.";}}
+function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function safeUrl(v=""){try{const u=new URL(v);return ["https:","http:"].includes(u.protocol)?u.href:"";}catch{return "";}}
+</script>
+</body></html>
