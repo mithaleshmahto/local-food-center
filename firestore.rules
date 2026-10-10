@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+
+    match /foods/{foodId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.sellerId == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 70
+        && request.resource.data.price is number
+        && request.resource.data.price > 0
+        && request.resource.data.price <= 50000
+        && request.resource.data.area is string;
+      allow update, delete: if signedIn()
+        && resource.data.sellerId == request.auth.uid;
+    }
+
+    match /orders/{orderId} {
+      allow create: if signedIn()
+        && request.resource.data.buyerId == request.auth.uid
+        && request.resource.data.paymentMethod == 'COD'
+        && request.resource.data.status == 'PLACED';
+      allow read: if signedIn()
+        && (resource.data.buyerId == request.auth.uid
+            || resource.data.sellerId == request.auth.uid);
+      allow update, delete: if false;
+    }
+  }
+}
